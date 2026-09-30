@@ -272,8 +272,16 @@ def login():
             flash(f"Too many sign-in attempts. Please wait about {retry_after}s and try again.", "danger")
             return render_template("login.html"), 429
 
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
+        demo_role = request.form.get("demo_role")
+        if demo_role == "worker":
+            username, password = "worker1", "demo123"
+        elif demo_role == "reviewer":
+            username, password = "reviewer1", "demo123"
+        elif demo_role == "auditor":
+            username, password = "auditor1", "demo123"
+        else:
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
         conn = database.get_connection()
         row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
         authenticated = security.verify_and_upgrade_password(conn, row, password) if row else False
