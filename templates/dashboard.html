@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Reviewer Dashboard - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Reviewer Dashboard</h1>
+    <p class="page-subtitle">Live queue of triage notes across facilities, prioritised by risk tier.</p>
+  </div>
+</div>
+
+<div class="summary-counts">
+  <div class="count-tile emergency"><span class="num">{{ counts.emergency }}</span><span class="tile-label">Emergency</span></div>
+  <div class="count-tile high"><span class="num">{{ counts.high }}</span><span class="tile-label">High</span></div>
+  <div class="count-tile medium"><span class="num">{{ counts.medium }}</span><span class="tile-label">Medium</span></div>
+  <div class="count-tile low"><span class="num">{{ counts.low }}</span><span class="tile-label">Low</span></div>
+</div>
+
+{% if upcoming_followups %}
+<div class="card">
+  <h3>📅 Upcoming Follow-ups &amp; Check-ins <span class="field-hint">(maternal-health follow-up / chronic disease check-in reminders)</span></h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Due date</th><th>Triage ID</th><th>Patient</th><th>Facility</th><th>Scenario</th><th></th></tr></thead>
+    <tbody>
+      {% for f in upcoming_followups %}
+      <tr class="{% if f.overdue %}row-high{% endif %}">
+        <td>{{ f.next_followup_date }}{% if f.overdue %} <span class="badge badge-high" style="font-size:10px;">OVERDUE</span>{% endif %}</td>
+        <td>{{ f.triage_id }}</td>
+        <td>{{ f.display_name or '(not provided)' }}</td>
+        <td>{{ f.facility_name or '-' }}</td>
+        <td>{{ f.scenario.replace('_',' ') if f.scenario else '-' }}</td>
+        <td><a href="{{ url_for('triage_detail', note_id=f.id) }}" class="btn btn-small">Open</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+<form method="get" class="filters">
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All statuses</option>
+    {% for s in status_flow %}
+      <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s.replace('_',' ')|capitalize }}</option>
+    {% endfor %}
+  </select>
+  <select name="facility_type" onchange="this.form.submit()">
+    <option value="">All facility types</option>
+    {% for ft in facility_types %}
+      <option value="{{ ft }}" {% if facility_filter==ft %}selected{% endif %}>{{ ft }}</option>
+    {% endfor %}
+  </select>
+  <select name="risk_tier" onchange="this.form.submit()">
+    <option value="">All priorities</option>
+    {% for tier in ['emergency','high','medium','low'] %}
+      <option value="{{ tier }}" {% if tier_filter==tier %}selected{% endif %}>{{ RISK_TIER_LABELS[tier].label }}</option>
+    {% endfor %}
+  </select>
+  {% if status_filter or facility_filter or tier_filter %}
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-small">Clear filters</a>
+  {% endif %}
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Priority</th><th>Triage ID</th><th>Chief complaint</th><th>Facility</th>
+        <th>Scenario</th><th>Status</th><th>Created</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for n in notes %}
+      <tr class="row-{{ n.risk_tier }}">
+        <td><span class="badge badge-{{ n.risk_tier }}">{{ RISK_TIER_LABELS[n.risk_tier].label }}</span></td>
+        <td>{{ n.triage_id }}</td>
+        <td>{{ n.chief_complaint }}</td>
+        <td>{{ n.facility_type }}{% if n.facility_name %} &middot; {{ n.facility_name }}{% endif %}</td>
+        <td>{{ n.scenario.replace('_',' ') if n.scenario else '-' }}</td>
+        <td>{{ n.status.replace('_',' ') }}</td>
+        <td>{{ n.created_at }}</td>
+        <td><a href="{{ url_for('triage_detail', note_id=n.id) }}" class="btn btn-small">Review</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No triage notes match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

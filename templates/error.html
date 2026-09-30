@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} - {{ title }} - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px;margin:40px auto;text-align:center;">
+  <h1 style="font-size:48px;margin-bottom:0;color:var(--brand,#155e63);">{{ code }}</h1>
+  <h2 style="margin-top:4px;">{{ title }}</h2>
+  <p class="field-hint" style="font-size:15px;">{{ message }}</p>
+  <div style="margin-top:20px;">
+    {% if current_user %}
+    <a href="{{ url_for('home') }}" class="btn">Go to home</a>
+    {% else %}
+    <a href="{{ url_for('login') }}" class="btn">Go to sign in</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+# Local secrets / runtime state - never commit these
+.env
+data/.secret_key
+data/*.db
+data/uploads/
+logs/
+
+# Downloaded model weights (large binaries, fetched by download_model.py)
+models/*.gguf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Additional requirements
+.env.*
+*.bin
+*.safetensors
+models/.cache/
+.cache/
+data/uploaded_reports/
+*.log
+.huggingface/
+huggingface/
+.hf/
+
+
+token_hugg.txt
+models/indictrans2*/
+

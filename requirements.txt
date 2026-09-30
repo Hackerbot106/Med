@@ -1,0 +1,49 @@
+Flask>=3.0
+Werkzeug>=3.0
+Jinja2>=3.1
+Pillow>=10.0
+pytesseract>=0.3.10
+pdf2image>=1.17
+reportlab>=4.0
+
+# Local, offline, CPU-only LLM for AI summarization + structured extraction
+# (see triage_engine/llm.py). Prebuilt CPU wheels are available for common
+# platforms (Windows/macOS/Linux, x86_64 and arm64) so this normally does
+# NOT require a C++ compiler. The app works fine without this installed -
+# it just falls back to the deterministic rules-based pipeline until both
+# this package AND the model file (see download_model.py) are present.
+# >=0.2.90 is required for grammar-constrained JSON decoding
+# (LlamaGrammar.from_json_schema) used to make AI extraction reliable -
+# see llm.py's "RELIABILITY & CPU-OPTIMIZATION NOTES".
+llama-cpp-python>=0.2.90
+
+# OPTIONAL, for the MedGemma "AI-suggested possible findings from a photo"
+# feature (see triage_engine/vision.py) to use the CORRECT Gemma-3 chat
+# template instead of the LLaVA-1.5 compatibility fallback that the package
+# above already provides out of the box. Not required to run the app or
+# this feature at all - purely a fidelity upgrade. Installing this REPLACES
+# the package above (same import path, drop-in):
+#   pip install "llama-cpp-python @ git+https://github.com/JamePeng/llama-cpp-python.git"
+
+# OPTIONAL, for dedicated (higher-quality) Hindi/Odia translation of the AI
+# summary via IndicTrans2, instead of asking the generalist Qwen2.5 chat
+# model to translate (see triage_engine/indic_translate.py for why - Odia
+# in particular is a very low-resource language for a small generalist
+# model, and this is unrelated to the llama-cpp-python stack above, so it's
+# commented out by default to keep the base install lightweight). The app
+# falls back to Qwen2.5's translation, then to English, if these aren't
+# installed - not required to run the app or this feature's fallback path.
+#   pip install transformers>=4.40 torch>=2.0 IndicTransToolkit>=1.0
+
+# --- Industrial-grade / production hardening additions ---
+# Loads a local .env file for configuration (see .env.example, config.py).
+# Purely optional at runtime - config.py degrades gracefully if absent.
+python-dotenv>=1.0
+
+# Production WSGI server (see wsgi.py, gunicorn.conf.py, Dockerfile).
+# Not needed to run the app locally with `python app.py`.
+gunicorn>=21.2; platform_system != "Windows"
+
+# System-level (not pip) dependencies required for OCR to work:
+#   - tesseract-ocr   (Debian/Ubuntu: sudo apt install tesseract-ocr)
+#   - poppler-utils   (Debian/Ubuntu: sudo apt install poppler-utils)  [needed for PDF report uploads]

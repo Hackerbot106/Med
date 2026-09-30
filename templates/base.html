@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="disclaimer-banner">
+    ⚠ Educational prototype &mdash; triage-support only. <strong>Non-diagnostic.</strong> Does not prescribe treatment. Use synthetic/public sample data only. All outputs require review by a qualified health worker, nurse, doctor, or medical officer.
+  </div>
+
+  {% if current_user %}
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="{{ url_for('home') }}">
+        <span class="brand-icon">🩺</span>
+        <span>{{ app_name }}</span>
+      </a>
+      <nav>
+        {% if current_user.role == 'intake_worker' %}
+          <a href="{{ url_for('consent') }}" class="{% if request.endpoint in ['consent','intake','intake_confirmation'] %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            New Intake
+          </a>
+        {% endif %}
+        {% if current_user.role == 'reviewer' %}
+          <span class="nav-section-label">Workspace</span>
+          <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint in ['dashboard','triage_detail'] %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            Dashboard
+          </a>
+          <a href="{{ url_for('consent') }}" class="{% if request.endpoint in ['consent','intake','intake_confirmation'] %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            New Intake
+          </a>
+          <span class="nav-section-label">Governance</span>
+          <a href="{{ url_for('audit_log_view') }}" class="{% if request.endpoint == 'audit_log_view' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            Audit Log
+          </a>
+        {% endif %}
+        {% if current_user.role == 'auditor' %}
+          <span class="nav-section-label">Governance</span>
+          <a href="{{ url_for('audit_log_view') }}" class="{% if request.endpoint == 'audit_log_view' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            Audit Log
+          </a>
+        {% endif %}
+      </nav>
+      <div class="user-card">
+        <div class="name">{{ current_user.display_name }}</div>
+        <div class="role">{{ current_user.role.replace('_',' ') }}</div>
+        <a href="{{ url_for('logout') }}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Sign out
+        </a>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="site-footer">
+        <p>Prototype build for hackathon evaluation purposes. Not for use with real patient data. Synthetic demo data only.</p>
+      </footer>
+    </div>
+  </div>
+  {% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack" style="max-width:420px;margin:16px auto 0;">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {{ self.content() }}
+    <footer class="site-footer">
+      <p>Prototype build for hackathon evaluation purposes. Not for use with real patient data. Synthetic demo data only.</p>
+    </footer>
+  {% endif %}
+</body>
+</html>

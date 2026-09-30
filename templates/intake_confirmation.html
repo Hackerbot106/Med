@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Triage note {{ patient.triage_id }} created{% endblock %}
+{% block content %}
+<h1>✅ Triage Note Created</h1>
+<div class="card">
+  <p><strong>Triage ID:</strong> {{ patient.triage_id }} &nbsp;|&nbsp;
+     <span class="badge badge-{{ note.risk_tier }}">{{ tier_meta.label }}</span></p>
+  <p class="field-hint">This note has been queued for reviewer sign-off. It is <strong>not</strong> a diagnosis
+     or treatment decision &mdash; a qualified reviewer will confirm next steps.</p>
+
+  <h3>Chief complaint</h3>
+  <p>{{ structured.chief_complaint }}</p>
+
+  <h3>Why this priority</h3>
+  <ul class="reason-list">
+    {% for r in structured.risk_reasons %}<li>{{ r }}</li>{% endfor %}
+  </ul>
+
+  {% if structured.missing_info %}
+  <h3>Missing information (reviewer will follow up)</h3>
+  <ul class="reason-list">
+    {% for m in structured.missing_info %}<li>{{ m }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <div style="margin-top:20px;">
+    <a href="{{ url_for('consent') }}" class="btn">Start Next Intake</a>
+    {% if current_user.role == 'reviewer' %}
+      <a href="{{ url_for('triage_detail', note_id=note.id) }}" class="btn btn-secondary">Open in Reviewer View</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

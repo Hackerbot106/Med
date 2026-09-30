@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Consent - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;margin:0 auto;">
+  <h1>Consent to Continue</h1>
+  <div class="consent-box">
+    <p><strong>Please read aloud / show to the patient (or guardian) before proceeding:</strong></p>
+    <p>"We would like to note down your symptoms and any reports you share, using a computer-assisted
+       tool, to help our health worker or doctor review your case faster. This tool only organises
+       information &mdash; it does not diagnose you or decide your treatment. Only the minimum
+       information needed will be collected. Your data will be used only for your care at this
+       facility and kept only as long as needed for that purpose."</p>
+    <ul>
+      <li>Participation is voluntary; you may decline and be triaged manually instead.</li>
+      <li>Do not share information you are not comfortable recording in this system.</li>
+      <li>You may ask the health worker what data is stored and request it be deleted after your visit.</li>
+    </ul>
+  </div>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;">
+      <input type="checkbox" name="consent_ack" style="width:auto;margin-top:3px;">
+      I have explained the above to the patient (or they have read it) and they consent to their
+      information being entered into this triage-support tool for the purpose of this visit only.
+    </label>
+    <div style="margin-top:18px;">
+      <button type="submit">Continue to Intake</button>
+      <a href="{{ url_for('home') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

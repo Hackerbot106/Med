@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}New Intake - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Patient Intake</h1>
+    <p class="page-subtitle">Consent recorded at {{ session.get('consent_timestamp') }}. Fill in what is available &mdash; the system will flag anything missing for the reviewer rather than blocking submission.</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="intake-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card">
+    <h3>Facility &amp; Context</h3>
+    <div class="row">
+      <div>
+        <label for="facility_type">Facility type</label>
+        <select id="facility_type" name="facility_type" required>
+          {% for ft in facility_types %}<option value="{{ ft }}" {% if form_data.get('facility_type')==ft %}selected{% endif %}>{{ ft }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="facility_name">Facility name (optional)</label>
+        <input type="text" id="facility_name" name="facility_name" placeholder="e.g. CHC Khordha" value="{{ form_data.get('facility_name', '') }}">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="scenario">Scenario</label>
+        <select id="scenario" name="scenario">
+          {% for value, label in scenarios %}<option value="{{ value }}" {% if form_data.get('scenario')==value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="preferred_language">Preferred language for note review</label>
+        <select id="preferred_language" name="preferred_language">
+          {% for code, label in languages.items() %}<option value="{{ code }}" {% if form_data.get('preferred_language')==code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="row" id="followup-date-row" style="display:none;">
+      <div>
+        <label for="next_followup_date">Next follow-up / check-in date</label>
+        <input type="date" id="next_followup_date" name="next_followup_date" value="{{ form_data.get('next_followup_date', '') }}">
+        <p class="field-hint">Shown for maternal-health follow-up and chronic disease check-in scenarios &mdash; sets a reminder that appears on the reviewer dashboard until marked complete.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Patient (minimal data collection)</h3>
+    <div class="row">
+      <div>
+        <label for="display_name">Name (optional)</label>
+        <input type="text" id="display_name" name="display_name" placeholder="Optional - can be left blank" value="{{ form_data.get('display_name', '') }}">
+      </div>
+      <div>
+        <label for="age">Age (e.g. "34 years" or "6 months")</label>
+        <input type="text" id="age" name="age" placeholder="34 years" value="{{ form_data.get('age', '') }}">
+      </div>
+      <div>
+        <label for="sex">Sex</label>
+        <select id="sex" name="sex">
+          <option value="" {% if form_data.get('sex', '')=='' %}selected{% endif %}>Prefer not to say</option>
+          <option value="Female" {% if form_data.get('sex')=='Female' %}selected{% endif %}>Female</option>
+          <option value="Male" {% if form_data.get('sex')=='Male' %}selected{% endif %}>Male</option>
+          <option value="Other" {% if form_data.get('sex')=='Other' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+    </div>
+    <p class="field-hint">Only minimal identifying data is collected. A unique Triage ID is generated automatically for reference.</p>
+  </div>
+
+  <div class="card">
+    <h3>Symptoms</h3>
+    <input type="hidden" name="input_mode" id="input_mode" value="{{ form_data.get('input_mode', 'text') }}">
+    <label for="symptom_text">Describe symptoms in the patient's own words (typed, or use voice input)</label>
+    <textarea id="symptom_text" name="symptom_text" placeholder="e.g. Fever for 3 days, cough, feels breathless since this morning...">{{ form_data.get('symptom_text', '') }}</textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+      <button type="button" id="voice-btn" class="voice-btn">🎤 Start voice input</button>
+      <span id="voice-status" class="field-hint"></span>
+    </div>
+    <p class="field-hint">Voice input uses your browser's built-in speech recognition in whichever language is selected above (English, Hindi, or Odia). If unsupported for the selected language, or unsupported by the browser, please type symptoms instead.</p>
+  </div>
+
+  <div class="card">
+    <h3>Uploaded Report (optional)</h3>
+    <label for="report_file">Lab report / prescription photo or PDF</label>
+    <input type="file" id="report_file" name="report_file" accept=".png,.jpg,.jpeg,.pdf,.bmp,.tiff">
+    <p class="field-hint">OCR will attempt to extract vitals/values automatically. Photos of wounds or visible symptoms may also be attached here for the reviewer to inspect directly. If the local AI vision model is available, it will also generate a plain-language description and, when the MedGemma model is installed, an AI-suggested list of possible visible considerations - always hedged, always for the reviewer to confirm, and never a final diagnosis.</p>
+  </div>
+
+  <button type="submit">Submit for Triage Review</button>
+</form>
+
+<script src="{{ url_for('static', filename='js/intake.js') }}"></script>
+<script>
+  (function () {
+    var scenarioSelect = document.getElementById('scenario');
+    var followupRow = document.getElementById('followup-date-row');
+    var reminderScenarios = ['maternal_followup', 'chronic_checkin'];
+    function toggleFollowup() {
+      followupRow.style.display = reminderScenarios.indexOf(scenarioSelect.value) !== -1 ? '' : 'none';
+    }
+    scenarioSelect.addEventListener('change', toggleFollowup);
+    toggleFollowup();
+  })();
+</script>
+{% endblock %}

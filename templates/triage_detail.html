@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.triage_id }} - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ patient.triage_id }} <span class="badge badge-{{ note.risk_tier }}">{{ translate_tier_label(note.risk_tier, lang) }}</span>
+      {% if structured.ai_powered %}<span class="badge" style="background:#1c5e8a;">🤖 AI-Extracted</span>
+      {% else %}<span class="badge" style="background:#616161;">📋 Rules-Based</span>{% endif %}</h1>
+    <p class="page-subtitle">{{ ui.facility_label }}: {{ patient.facility_type }}{% if patient.facility_name %} &middot; {{ patient.facility_name }}{% endif %}
+       &nbsp;|&nbsp; {{ ui.scenario_label }}: {{ note.scenario.replace('_',' ') if note.scenario else '-' }}
+       &nbsp;|&nbsp; {{ ui.status_label }}: <strong>{{ translate_status_label(note.status, lang) }}</strong>
+       &nbsp;|&nbsp; {{ ui.input_mode_label }}: {{ note.input_mode }}</p>
+    <p class="field-hint">ℹ {{ structured.extraction_source }}</p>
+  </div>
+</div>
+
+<div class="lang-switch">
+  {% for code, label in SUPPORTED_LANGUAGES.items() %}
+    <a href="{{ url_for('triage_detail', note_id=note.id, lang=code) }}" class="{% if lang==code %}active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+{% if translated.note %}<p class="field-hint">ℹ {{ translated.note }}</p>{% endif %}
+
+<div class="two-col">
+  <div class="card">
+    <h3>{{ ui.patient_anonymised_view }}</h3>
+    <p>{{ ui.name_label }}: {{ mask_name(patient.display_name) }}<br>
+       {{ ui.age_label }}: {{ patient.age or ui.unknown_value }} &nbsp; {{ ui.sex_label }}: {{ patient.sex or ui.unknown_value }}<br>
+       {{ ui.preferred_language_label }}: {{ SUPPORTED_LANGUAGES.get(patient.preferred_language, patient.preferred_language) }}</p>
+
+    <h3>🤖 {{ ui.ai_generated_summary }} <span class="field-hint">{{ ui.ai_summary_draft_note }}</span></h3>
+    {% if ai_translation_note %}
+      <p class="field-hint">⚠ {{ ai_translation_note }}</p>
+    {% endif %}
+    {% if ai_summary_display %}
+      <p>{{ ai_summary_display }}</p>
+      <p class="field-hint">{{ ui.ai_summary_meta_generated_by }} {{ note.ai_summary_model }} {{ ui.ai_summary_meta_at }} {{ note.ai_summary_generated_at }}.
+         {{ ui.ai_summary_meta_disclaimer }}</p>
+    {% else %}
+      <p class="field-hint">{{ ai_status_message }}</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('triage_regenerate_ai', note_id=note.id) }}" style="margin-top:6px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-secondary btn-small">🔄 {% if ai_summary_display %}{{ ui.regenerate_ai_summary }}{% else %}{{ ui.generate_ai_summary }}{% endif %}</button>
+    </form>
+
+    <h3 style="margin-top:22px;">{{ ui.chief_complaint }}</h3>
+    <p>{{ chief_complaint_display }}</p>
+
+    <h3>{{ ui.risk_priority }}: {{ translate_tier_label(note.risk_tier, lang) }} (score {{ structured.risk_score }})</h3>
+    <ul class="reason-list">
+      {% for r in risk_reasons_display %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+    {% if structured.ai_powered %}
+    <details style="margin-top:8px;">
+      <summary class="field-hint" style="cursor:pointer;">{{ ui.safety_net_summary }}</summary>
+      <p class="field-hint" style="margin-top:6px;">
+        {{ ui.safety_net_body_prefix }}
+        <strong>{{ translate_tier_label(structured.rules_only_risk_tier, lang) if structured.rules_only_risk_tier else ui.na_value }}</strong>.
+        {{ ui.safety_net_body_suffix }}
+      </p>
+      {% if rules_only_symptoms_display %}
+      <p class="field-hint">{{ ui.rules_engine_detected_label }} {{ rules_only_symptoms_display | join(', ') }}</p>
+      {% endif %}
+    </details>
+    {% endif %}
+
+    <h3>{{ ui.reported_symptoms }} {% if lang != 'en' %}({{ translated.lang_label }}){% endif %}</h3>
+    {% if structured.symptoms %}
+    <ul class="reason-list">
+      {% for s in structured.symptoms %}
+      <li>{{ translated.symptoms[loop.index0] }} &mdash; {{ ui.category_label }}: {{ translate_category_label(s.category, lang) }}, {{ ui.severity_level_label }}: {{ s.severity_level }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="field-hint">{{ ui.no_symptoms_detected }}</p>{% endif %}
+
+    {% if negated_symptoms_display %}
+    <h3>{{ ui.explicitly_denied }}</h3>
+    <p class="field-hint">{{ negated_symptoms_display|join(', ') }}</p>
+    {% endif %}
+
+    <h3>{{ ui.timeline_heuristic }}</h3>
+    {% if structured.timeline %}
+    <ul class="reason-list">
+      {% for e in structured.timeline %}<li>{{ e.symptom }}: {% if e.onset_text == 'duration not specified' %}{{ ui.duration_not_specified }}{% else %}{{ e.onset_text }}{% endif %}</li>{% endfor %}
+    </ul>
+    {% else %}<p class="field-hint">{{ ui.no_timeline_inferred }}</p>{% endif %}
+
+    <h3>{{ ui.vitals_label }}</h3>
+    {% if structured.vitals %}
+    <ul class="reason-list">
+      {% for k, v in structured.vitals.items() %}<li>{{ k.replace('_',' ') }}: {{ v }}</li>{% endfor %}
+    </ul>
+    {% else %}<p class="field-hint">{{ ui.no_vitals_recorded }}</p>{% endif %}
+
+    <h3>{{ ui.missing_info }}</h3>
+    {% if missing_info_display %}
+    <ul class="reason-list">{% for m in missing_info_display %}<li>{{ m }}</li>{% endfor %}</ul>
+    {% else %}<p class="field-hint">{{ ui.none_flagged }}</p>{% endif %}
+
+    <h3>{{ ui.follow_up_questions }}</h3>
+    <ul class="qa-list">
+      {% for q in translated.follow_up_questions %}<li>{{ q }}</li>{% endfor %}
+    </ul>
+    {% if ai_followups_display %}
+    <p class="field-hint" style="margin-top:8px;">🤖 {{ ui.additional_ai_questions }}</p>
+    <ul class="qa-list">
+      {% for q in ai_followups_display %}<li>{{ q }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if extra_translation_failed %}
+    <p class="field-hint">⚠ One or more AI-generated sections above didn't pass a translation quality
+       check just now (a known limitation of small local models for lower-resource languages) and are
+       shown in the original English instead.</p>
+    {% endif %}
+
+    <h3>{{ ui.raw_patient_text }}</h3>
+    <div class="mono">{{ note.raw_symptom_text or ui.none_provided_see_report }}</div>
+
+    {% if note.ocr_extracted_text %}
+    <h3>{{ ui.ocr_extracted_text_label }} ({{ note.ocr_source_filename }})</h3>
+    <div class="mono">{{ note.ocr_extracted_text }}</div>
+    <p class="field-hint">{{ ui.ocr_verify_note }}</p>
+    {% endif %}
+
+    {% if image_ai_description_display %}
+    <h3>🤖 {{ ui.ai_image_description }} <span class="field-hint">{{ ui.ai_image_description_note }}</span></h3>
+    <p>{{ image_ai_description_display }}</p>
+    <p class="field-hint">{{ ui.ai_summary_meta_generated_by }} {{ note.image_ai_model }}. {{ ui.ai_image_meta_disclaimer }}</p>
+    {% endif %}
+
+    {% if image_ai_findings_display %}
+    <h3>🩺 {{ ui.ai_findings_label }} <span class="field-hint">{{ ui.ai_findings_note }}</span></h3>
+    <ul class="reason-list">
+      {% for finding in image_ai_findings_display %}<li>{{ finding }}</li>{% endfor %}
+    </ul>
+    <p class="field-hint" style="font-weight:600;">{{ MEDGEMMA_DISCLAIMER }}</p>
+    <p class="field-hint">{{ ui.ai_summary_meta_generated_by }} {{ note.image_ai_findings_model }}. {{ ui.ai_findings_meta_disclaimer }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>{{ ui.reviewer_actions }}</h3>
+    <form method="post" action="{{ url_for('triage_update', note_id=note.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="status">{{ ui.status_label }}</label>
+      <select id="status" name="status">
+        {% for s in status_flow %}
+        <option value="{{ s }}" {% if note.status==s %}selected{% endif %}>{{ translate_status_label(s, lang) }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="referral_facility">{{ ui.referral_facility_label }}</label>
+      <input type="text" id="referral_facility" name="referral_facility" value="{{ note.referral_facility or '' }}" placeholder="{{ ui.referral_facility_placeholder }}">
+
+      <label for="reviewer_notes">{{ ui.reviewer_notes_label }}</label>
+      <textarea id="reviewer_notes" name="reviewer_notes" placeholder="{{ ui.reviewer_notes_placeholder }}">{{ note.reviewer_notes or '' }}</textarea>
+
+      <label for="next_followup_date">{{ ui.next_followup_label }}</label>
+      <input type="date" id="next_followup_date" name="next_followup_date" value="{{ note.next_followup_date or '' }}">
+      <p class="field-hint">{{ ui.next_followup_hint }}</p>
+
+      <div style="margin-top:14px;">
+        <button type="submit">{{ ui.save_review }}</button>
+        <a href="{{ url_for('triage_referral_pdf', note_id=note.id) }}" class="btn btn-secondary">⬇ {{ ui.download_referral_pdf }}</a>
+      </div>
+    </form>
+    {% if note.next_followup_date and not note.followup_completed %}
+    <form method="post" action="{{ url_for('triage_followup_done', note_id=note.id) }}" style="margin-top:8px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-secondary btn-small">✓ {{ ui.mark_followup_complete_prefix }} ({{ note.next_followup_date }}) {{ ui.mark_followup_complete_suffix }}</button>
+    </form>
+    {% endif %}
+
+    <h3 style="margin-top:26px;">{{ ui.record_label }}</h3>
+    <p class="field-hint">{{ ui.created_label }}: {{ note.created_at }}<br>
+       {{ ui.last_updated_label }}: {{ note.updated_at }}<br>
+       {% if note.reviewed_at %}{{ ui.reviewed_at_label }}: {{ note.reviewed_at }}<br>{% endif %}
+       {{ ui.consent_recorded_label }}: {{ patient.consent_timestamp or ui.not_recorded }}</p>
+  </div>
+</div>
+{% endblock %}

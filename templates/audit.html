@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Audit Log - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Audit Log</h1>
+    <p class="page-subtitle">Every view, edit, login, and export is recorded here for traceability (auditability requirement). This demonstrates the mechanism only; a production system would add tamper-evidence and long-term retention controls.</p>
+  </div>
+</div>
+
+{% if current_user.role == 'auditor' %}
+<div class="card">
+  <h3>Data Minimisation Control</h3>
+  <p class="field-hint">Simulates a retention policy: permanently deletes triage notes already marked "closed" (fully handled cases no longer needed for follow-up).</p>
+  <form method="post" action="{{ url_for('purge_closed') }}" onsubmit="return confirm('Permanently delete all closed triage notes? This cannot be undone.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn-danger">Purge Closed Records</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td>{{ e.timestamp }}</td>
+        <td>{{ e.actor }}</td>
+        <td>{{ e.action.replace('_',' ') }}</td>
+        <td>{{ e.target_type }} #{{ e.target_id }}</td>
+        <td class="field-hint">{{ e.details }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">No audit entries yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}
